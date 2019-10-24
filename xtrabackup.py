@@ -1,4 +1,4 @@
-import os,datetime,shutil,pipes,time
+import os,datetime,shutil,pipes,time,subprocess
 
 #docker run -it -v /Users/hv024036/Desktop/python:/scripts --name xtrabackup harsha_python:latest
 
@@ -10,8 +10,9 @@ db = 'zabbix'
 DATA_DIRECTORY = '/Users/hv024036/Desktop/python'
 BACKUP_PATH = '/Users/hv024036/Desktop/python/percona'
 cleanup = 2
+toaddr = 'sriharsha.vallabaneni@gmail.com'
 #wday = datetime.date.today().weekday()
-wday = 5
+wday = 6
 print wday
 days = datetime.date.today()
 print days
@@ -29,10 +30,19 @@ class Xtrabackup:
                os.mkdir(TODAYBACKUPPATH)
                print "Directory is created"
 
-          dumpcmd = "xtrabackup --backup" + " --compress " + "--user " + DB_USER + " --password " + DB_USER_PASSWORD + " --target-dir=" + TODAYBACKUPPATH + " --datadir=" + DATA_DIRECTORY
-          print dumpcmd
+          #dumpcmd = "xtrabackup --backup" + " --compress " + "--user " + DB_USER + " --password " + DB_USER_PASSWORD + " --target-dir=" + TODAYBACKUPPATH + " --datadir=" + DATA_DIRECTORY
+          dumpcmd = "ls -l"
+          #print dumpcmd
           #os.system(dumpcmd)
-          xf.cleanup(cleanup)
+          retcode = os.system(dumpcmd)
+          print retcode
+          if ( retcode == 0 ):
+               ## To clean up the old backup's
+               print "I am executing"
+               #xf.cleanup(cleanup)
+          else:
+               print "Need to send email"
+
 
 
      def Incremental(self, wday, days):
@@ -89,7 +99,7 @@ class Xtrabackup:
 
 
 
-if (wday == 5):
+if (wday == 6):
      xf = Xtrabackup()
      xf.fullbackup(days)
 else:
