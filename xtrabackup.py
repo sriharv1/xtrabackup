@@ -3,8 +3,6 @@
 import os,datetime,shutil,pipes,time,subprocess,sys
 
 filename = sys.argv[1]
-DATA_DIRECTORY = '/Users/hv024036/Desktop/python'
-BACKUP_PATH = '/Users/hv024036/Desktop/python/percona'
 days = datetime.date.today()
 filename = sys.argv[1]
 DB_HOST = 'centosvm01' #ie. localhost
@@ -12,8 +10,8 @@ DB_USER = 'bkpuser'
 DB_USER_PASSWORD = 'bkpuser'
 db = 'zabbix'
 cleanup = 2
-DATA_DIRECTORY = '/Users/hv024036/Desktop/python'
-BACKUP_PATH = '/Users/hv024036/Desktop/python/percona'
+DATA_DIRECTORY = '/var/lib/mysql'
+BACKUP_PATH = '/var/lib/backups'
 cleanup = 2
 toaddr = 'sriharsha.vallabaneni@gmail.com'
 days = datetime.date.today()
@@ -76,7 +74,6 @@ class Xtrabackup():
                     print TODAYBACKUPPATH
                     os.makedirs(TODAYBACKUPPATH)
                     dumpcmd = "xtrabackup --backup" + " --compress " + "--user " + DB_USER + " --password " + DB_USER_PASSWORD + " --target-dir=" + TODAYBACKUPPATH + " --incremental-basedir=" + BASE_DIR
-                    dumpcmd = "ls -l"
                     print "I am INC0 backup"
                     retcode = os.system(dumpcmd)
                     if ( retcode == 0 ):
@@ -93,7 +90,6 @@ class Xtrabackup():
                     print TODAYBACKUPPATH
                     os.makedirs(TODAYBACKUPPATH)
                     dumpcmd = "xtrabackup --backup" + " --compress " + "--user " + DB_USER + " --password " + DB_USER_PASSWORD + " --target-dir=" + TODAYBACKUPPATH + " --incremental-basedir=" + BASE_DIR
-                    dumpcmd = "ls -l"
                     print BASE_DIR
                     print "I am INC" +str(b-1) + " backup"
                     retcode = os.system(dumpcmd)
