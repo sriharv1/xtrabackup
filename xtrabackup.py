@@ -16,7 +16,6 @@ import os,datetime,shutil,time,subprocess,sys
 ####### Variables that need to be filled before running the script first time
 TYPEOF_BKP = sys.argv[1]
 #TYPEOF_BKP = str(raw_input("please enter your choice: "))
-DB_HOST = 'centosvm01' 
 DB_USER = 'bkpuser'
 DB_USER_PASSWORD = 'bkpuser'
 DB_DATABASES = 'zabbix'
@@ -283,17 +282,10 @@ class Xtrabackup():
                     os.makedirs(bckloc)
                     os.chdir(bckloc)
                     print "Executed when backup path not exist"
-                    if (os.path.isfile('table_bkp.txt') == True):
-                         os.remove('table_bkp.txt')
-                         f = open("table_bkp.txt","a+")
-                         for i in range(len(table)):
-                              f.write(table[i] +"\n")
-                              print table[i]
-                    else:
-                         f = open("table_bkp.txt","a+")
-                         for i in range(len(table)):
-                              f.write(table[i] +"\n")
-                              print table[i]
+                    f = open("table_bkp.txt","a+")
+                    for i in range(len(table)):
+                         f.write(table[i] +"\n")
+                         print table[i]
                     f.close()
                     table_file = bckloc + "/" + "table_bkp.txt"
                     dumpcmd = "xtrabackup --backup --user=" + DB_USER + " --password=" + DB_USER_PASSWORD + " --target-dir=" + bckloc + " --tables-file=" + table_file
@@ -310,17 +302,10 @@ class Xtrabackup():
                     if len(os.listdir(bckloc)) == 0:
                          print "Executed when backup path exists"
                          os.chdir(bckloc)
-                         if (os.path.isfile('table_bkp.txt') == True):
-                              os.remove('table_bkp.txt')
-                              f = open("table_bkp.txt","a+")
-                              for i in range(len(table)):
-                                   f.write(table[i] +"\n")
-                                   print table[i]
-                         else:
-                              f = open("table_bkp.txt","a+")
-                              for i in range(len(table)):
-                                   f.write(table[i] +"\n")
-                                   print table[i]
+                         f = open("table_bkp.txt","a+")
+                         for i in range(len(table)):
+                              f.write(table[i] +"\n")
+                              print table[i]
                          f.close()
                          table_file = bckloc + "/" + "table_bkp.txt"
                          dumpcmd = "xtrabackup --backup --user=" + DB_USER + " --password=" + DB_USER_PASSWORD + " --target-dir=" + bckloc + " --tables-file=" + table_file
