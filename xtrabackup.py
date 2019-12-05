@@ -14,7 +14,11 @@
 import os,datetime,shutil,time,subprocess,sys
 
 ####### Variables that need to be filled before running the script first time
-TYPEOF_BKP = sys.argv[1]
+if len(sys.argv) == 1:
+     print "Please provide arguments to the backup else type \'xtrabackup.py -h\' on how to use script "
+     exit()
+else:
+     TYPEOF_BKP = sys.argv[1]
 #TYPEOF_BKP = str(raw_input("please enter your choice: "))
 DB_USER = 'bkpuser'
 DB_USER_PASSWORD = 'bkpuser'
@@ -427,6 +431,8 @@ elif TYPEOF_BKP == 'tablebackup':
                exit()
      xf = Xtrabackup()
      xf.tablebackup(database,table,bckloc)
+elif TYPEOF_BKP == 'test':
+     print "test"
      
 
 elif TYPEOF_BKP == "-h":
@@ -439,4 +445,8 @@ elif TYPEOF_BKP == "-h":
      print "xtrabackup.py <databaserestore> will prompt for preparing databases that need to perform restore"
      print "xtrabackup.py <tablebackup> for backing up the tables"
      print "xtrabackup.py <tableprepare> for preparing the tables for restore"
+
+
+     
+
 
