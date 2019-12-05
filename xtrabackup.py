@@ -12,6 +12,7 @@
 
 ### Modules used for automating
 import os,datetime,shutil,time,subprocess,sys
+
 ####### Variables that need to be filled before running the script first time
 TYPEOF_BKP = sys.argv[1]
 #TYPEOF_BKP = str(raw_input("please enter your choice: "))
@@ -19,10 +20,10 @@ DB_HOST = 'centosvm01'
 DB_USER = 'bkpuser'
 DB_USER_PASSWORD = 'bkpuser'
 DB_DATABASES = 'zabbix'
-BKP_CLEANUP = 2
+BKP_CLEANUP = 200
 DATA_DIRECTORY = '/var/lib/mysql'
 BACKUP_PATH = '/var/lib/backups'
-EMAIL = 'sriharsha.vallabaneni@gmail.com'
+EMAIL = 'sriharsha.vallabaneni@cerner.com'
 backuplog = '/usr/local/bin/xtrabackup.log'
 days = datetime.date.today()
 
@@ -54,10 +55,10 @@ class Xtrabackup():
                          f.write(str(b))              
                     print "Executing clean up"        ### Need to remove 
                     xf.cleanup(BKP_CLEANUP)
-                    mailcmd = "mailx -s" +  "\"FULL Backup is Success\"" + EMAIL + "<" + backuplog
+                    mailcmd = "mailx -s" +  " \"FULL Backup is Success\" " + EMAIL + " < " + backuplog
                     os.system(mailcmd)
                else:
-                    mailcmd = "mailx -s" +  "\"FULL Backup is Failure\"" + EMAIL + "<" + backuplog
+                    mailcmd = "mailx -s" +  " \"FULL Backup is Failure\" " + EMAIL + " < " + backuplog
                     os.system(mailcmd)
                     exit()
 
@@ -271,25 +272,70 @@ class Xtrabackup():
                               print "Unable to change permission of the mysql data directory:"
                               exit()
                          
-     def tablebackup(self,database,table,bckloc,tlist):
-
-          table = table
-          database = database 
-          tlist = tlist
-          bckloc = bckloc
-          print table
-          print database
-          if os.path.isdir(bckloc) != 'True':
-               os.makedirs(bckloc)
-          ### xtrabackup --backup --user=DBUSER --password=SECRET --target-dir=/var/lib/backups/table --tables="<database>.<table>"
-          for i in range(len(table)):
-               tbckloc = str(bckloc) + "/" + str(tlist[i])
-               if os.path.isdir(bckloc) != 'True':
-                    os.makedirs(tbckloc)
-                    dumpcmd = "xtrabackup --backup --user="+ DB_USER + " --password=" + DB_USER_PASSWORD + " --target-dir=" + bckloc + " --tables=\"" + table[i] + "\""
+     def tablebackup(self,database,table,bckloc):
+               table = table
+               database = database 
+               #tlist = tlist
+               bckloc = bckloc
+               print table
+               print database        
+               if os.path.isdir(bckloc) != True:
+                    os.makedirs(bckloc)
+                    os.chdir(bckloc)
+                    print "Executed when backup path not exist"
+                    if (os.path.isfile('table_bkp.txt') == True):
+                         os.remove('table_bkp.txt')
+                         f = open("table_bkp.txt","a+")
+                         for i in range(len(table)):
+                              f.write(table[i] +"\n")
+                              print table[i]
+                    else:
+                         f = open("table_bkp.txt","a+")
+                         for i in range(len(table)):
+                              f.write(table[i] +"\n")
+                              print table[i]
+                    f.close()
+                    table_file = bckloc + "/" + "table_bkp.txt"
+                    dumpcmd = "xtrabackup --backup --user=" + DB_USER + " --password=" + DB_USER_PASSWORD + " --target-dir=" + bckloc + " --tables-file=" + table_file
+                    #dumpcmd = "pwd"
+                    print "Executed when backup path not exist"
                     retcode = os.system(dumpcmd)
                     if retcode == 0:
-                         print dumpcmd
+                         mailcmd = "mailx -s" +  "\"Table Backup is Success\"" + EMAIL + "<" + backuplog
+                         os.system(mailcmd)
+                    else:
+                         mailcmd = "mailx -s" +  "\"Table Backup Failed please verify the logs\"" + EMAIL + "<" + backuplog
+                         os.system(mailcmd)
+               else:
+                    if len(os.listdir(bckloc)) == 0:
+                         print "Executed when backup path exists"
+                         os.chdir(bckloc)
+                         if (os.path.isfile('table_bkp.txt') == True):
+                              os.remove('table_bkp.txt')
+                              f = open("table_bkp.txt","a+")
+                              for i in range(len(table)):
+                                   f.write(table[i] +"\n")
+                                   print table[i]
+                         else:
+                              f = open("table_bkp.txt","a+")
+                              for i in range(len(table)):
+                                   f.write(table[i] +"\n")
+                                   print table[i]
+                         f.close()
+                         table_file = bckloc + "/" + "table_bkp.txt"
+                         dumpcmd = "xtrabackup --backup --user=" + DB_USER + " --password=" + DB_USER_PASSWORD + " --target-dir=" + bckloc + " --tables-file=" + table_file
+                         #dumpcmd = "pwd"
+                         print "Executed when backup path exists"
+                         retcode = os.system(dumpcmd)
+                         if retcode == 0:
+                              mailcmd = "mailx -s" +  "\"Table Backup is Success\"" + EMAIL + "<" + backuplog
+                              os.system(mailcmd)
+                         else:
+                              mailcmd = "mailx -s" +  "\"Table Backup Failed please verify the logs\"" + EMAIL + "<" + backuplog
+                              os.system(mailcmd)
+                    else:
+                         print "Files already existing please delete files/directories under " + bckloc
+
 
      def tableprepare(self,bckloc):
 
@@ -330,8 +376,6 @@ class Xtrabackup():
           print bkploc
 
 
-
-               
 if TYPEOF_BKP == 'full':
      xf = Xtrabackup()
      xf.fullbackup(days)
@@ -342,13 +386,20 @@ elif TYPEOF_BKP == 'cleanup':
      BKP_CLEANUP = int(input("No.of days before back up need to be deleted: "))
      xf = Xtrabackup()
      xf.cleanup(BKP_CLEANUP)
+
 elif TYPEOF_BKP == 'restore':
-     userIn = raw_input("please provide backup location: ")
-     restdays = datetime.datetime.strptime(userIn, "%d/%m/%y")
-     inc = input("please provide the incremental backup's: ")
-     #print restdays.date()
-     xf = Xtrabackup()
-     xf.restore(restdays,inc)
+     userIn = raw_input("Is the back restore is going to perform on local node yes/no: ")
+     if (userIn == 'yes' or userIn == 'y' or userIn == 'Y'):
+          restdays = raw_input("please provide backup location: ")
+          #restdays = datetime.datetime.strptime(userIn, "%d/%m/%y")
+          inc = input("please provide the incremental backup's: ")
+          #print restdays.date()
+          xf = Xtrabackup()
+          xf.restore(restdays,inc)
+     elif (userIn == 'No' or userIn == 'n' or userIn == 'N'):
+          print "Backup restore script and backup should be on local node, Please copy script and backup to local node"
+          exit()
+          
 elif TYPEOF_BKP == 'database':
      if len(sys.argv) > 1:
           databases = []
@@ -370,6 +421,7 @@ elif TYPEOF_BKP == 'database':
                     exit()
      xf = Xtrabackup()
      xf.dataBase(databases)
+     
 elif TYPEOF_BKP == 'databaserestore':
      bkploc = str(input("Please provide database backup location: "))
      xf = Xtrabackup()
@@ -380,18 +432,18 @@ elif TYPEOF_BKP == 'tablebackup':
      database = raw_input("Please provide the database to which table belongs: ")
      totaltables = int(raw_input("Num of tables that need to be backup: "))
      table = []
-     tlist = []
-     for a in range(totaltables) :
+     for a in range(totaltables):
           tlist = raw_input("Provide the tables that need to be backup: ")
           d = DATA_DIRECTORY + "/" + database + "/" + tlist + ".ibd"
           if os.path.isfile(d) == True:
                table.append(database + "." + str(tlist))
-               table.append(str(tlist))
           else:
                print list + "Table doesnt exist"
                exit()
      xf = Xtrabackup()
-     xf.tablebackup(database,table,bckloc,tlist)
+     xf.tablebackup(database,table,bckloc)
+     
+
 elif TYPEOF_BKP == "-h":
      print "Usage of xtrabackup.py"
      print "xtrabackup.py <full> for full backup"
