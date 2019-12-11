@@ -5,7 +5,8 @@
 ####   Usage of Xtrabackup can be found below
 #### print "xtrabackup.py <full> for full backup"
 #### print "xtrabackup.py <Inc> for Incremental backup, Make sure to have full backup before triggering for incremental backup"
-#### print "xtrabackup.py <restore> for preparing the backup for the restore. Please have the date"
+#### print "xtrabackup.py <fullrestore> for preparing the backup for the restore. Please have the date"
+####  print "xtrabackup.py <datacopy> for copying data which was prepared by using fullrestore and got failed copy back to data directory"
 #### print "xtrabackup.py <tablebackup> for backing up the tables"
 #### print "xtrabackup.py <tableprepare> for preparing the tables for restore"
 #### print "xtrabackup.py -h" for help
@@ -38,6 +39,8 @@ class Xtrabackup():
           ### Creating the backup path 
           if os.path.isdir(TODAYBACKUPPATH) == True:
                print "Backup path is exsisting please remove the directory : " +"\"" + TODAYBACKUPPATH + "\""
+               mailcmd = "mailx -s " +  " \"Back up path is existing please remove the path\" " + EMAIL + " < " + backuplog
+               os.system(mailcmd)
                exit()
           else:
                print "creating backup"
@@ -58,10 +61,10 @@ class Xtrabackup():
                          f.write(str(b))              
                     print "Executing clean up"        ### Need to remove 
                     xf.cleanup(BKP_CLEANUP)
-                    mailcmd = "mailx -s" +  " \"FULL Backup is Success\" " + EMAIL + " < " + backuplog
+                    mailcmd = "mailx -s " +  " \"FULL Backup is Success\" " + EMAIL + " < " + backuplog
                     os.system(mailcmd)
                else:
-                    mailcmd = "mailx -s" +  " \"FULL Backup is Failure\" " + EMAIL + " < " + backuplog
+                    mailcmd = "mailx -s " +  " \"FULL Backup is Failure\" " + EMAIL + " < " + backuplog
                     os.system(mailcmd)
                     exit()
 
@@ -92,10 +95,10 @@ class Xtrabackup():
                          b = b+1                          #increment the value and save it to inc.txt
                          with open("inc.txt",'w') as f:
                               f.write(str(b))              #writing a assuming it has been changed
-                         mailcmd = "mailx -s" +  "\"Incremental Backup is Success\"" + EMAIL + "<" + backuplog
+                         mailcmd = "mailx -s " +  "\"Incremental Backup is Success\"" + EMAIL + "<" + backuplog
                          os.system(mailcmd)
                     else:
-                         mailcmd = "mailx -s" +  "\"Incremental Backup is Failure\"" + EMAIL + "<" + backuplog
+                         mailcmd = "mailx -s " +  "\"Incremental Backup is Failure\"" + EMAIL + "<" + backuplog
                          os.system(mailcmd)
                          exit()
                else:
@@ -111,10 +114,10 @@ class Xtrabackup():
                          b = b+1                          #increment
                          with open("inc.txt",'w') as f:
                               f.write(str(b))              #writing a assuming it has been changed
-                         mailcmd = "mailx -s" +  "\"Incremental Backup is Success\"" + EMAIL + "<" + backuplog
+                         mailcmd = "mailx -s " +  "\"Incremental Backup is Success\"" + EMAIL + "<" + backuplog
                          os.system(mailcmd)
                     else:
-                         mailcmd = "mailx -s" +  "\"Incremental Backup is Failure\"" + EMAIL + "<" + backuplog
+                         mailcmd = "mailx -s " +  "\"Incremental Backup is Failure\"" + EMAIL + "<" + backuplog
                          os.system(mailcmd)
                          exit()
 
@@ -156,32 +159,33 @@ class Xtrabackup():
           print target
           ### Format for decompressing
           ### xtrabackup --decompress --target-dir=/data/compressed/
-          dumpcmd = "xtrabackup --decompress" + "--target-dir=" + target
-          # os.chdir(target)
-          # dumpcmd = "ls -l"
-          # print dumpcmd
+          dumpcmd = "xtrabackup --decompress" + " --target-dir=" + target
           retcode = os.system(dumpcmd)
+          print "full restore is complete"
           if ( retcode == 0 ):
+               print "successfull full decompress"
                if inc != 0:
-                    for i in range(int(inc)+1):
-                         target = d + "/inc" + str(i)
-                         dumpcmd = "xtrabackup --decompress" + "--target-dir" + target
+                    print "successfull finding INC"
+                    print inc
+                    for i in range(int(inc)):
+                         print i
+                         target = d + "/inc" + str(int(i))
+                         print target
+                         dumpcmd = "xtrabackup --decompress --target-dir=" + target
+                         print dumpcmd
                          #dumpcmd = "ls -l"    ##Need to remove
                          retcode = os.system(dumpcmd)
                          print "Restore inc" + str(i)   ## Need to remove
                          if ( retcode != 0 ):
-                              mailcmd = "mailx -s" +  "\"Incremental Backup is Failure\"" + EMAIL + "<" + backuplog
+                              mailcmd = "mailx -s " +  "\"Incremental Backup is Failure\"" + EMAIL + "<" + backuplog
                               os.system(mailcmd)
-                              print "Send failure decompress error for inc/" + str(i)      ### Need to remove
                               exit()
                     print "This many num of decompress is success: " + str(i)    ### Need to remove
-
                     ### Preparing & restoring the Full and Incremental backup by calling prepare(restday,inc) 
                     xf = Xtrabackup()
                     xf.prepare(restdays,inc)
                else:
                     ##### Preparing and restoring the full backup
-                    print "No incremental backup"    ### Need to remove
                     xf = Xtrabackup()
                     xf.fullprepare(restdays)
 
@@ -193,55 +197,42 @@ class Xtrabackup():
           target = full + "/full"
           ### Format for preparing
           ### xtrabackup --prepare --target-dir=/data/compressed/
-          print target
           dumpcmd = "xtrabackup --prepare --apply-log-only --target-dir=" + target
           retcode = os.system(dumpcmd)
           if ( retcode != 0 ):
-               mailcmd = "mailx -s" +  "\"Failure of preparing full backup\"" + EMAIL + "<" + backuplog
+               mailcmd = "mailx -s " +  "\"Failure of preparing full backup\"" + EMAIL + "<" + backuplog
                os.system(mailcmd)
                print "Failure of preparing full backup"   ### Need to send EMAIL
                exit()
           else:
-               for i in range(int(inc)+1):
+               for i in range(int(inc)):
                     print i             ## Need to remove
-                    if ( i == int(inc)):
+                    if ( i == int(inc)-1):
                          #xtrabackup --prepare --target-dir=full --incremental-dir=/data/backups/inc2
-                         dumpcmd = "xtrabackup --prepare --target-dir=" + target + "--incremental-dir=" + full + "/inc" +str(i)
+                         dumpcmd = "xtrabackup --prepare --target-dir=" + target + " --incremental-dir=" + full + "/inc" +str(i)
                          print "prepare final inc" + str(i)
-                         print dumpcmd
                          retcode = os.system(dumpcmd)
                          if retcode != 0:
-                              mailcmd = "mailx -s" +  "\"Failure of preparing final Incremental backup\"" + EMAIL + "<" + backuplog
+                              mailcmd = "mailx -s " +  "\"Failure of preparing final Incremental backup\"" + EMAIL + "<" + backuplog
                               os.system(mailcmd)
                               print "Failure of preparing full backup"   ### Need to send EMAIL
                               exit()
                     else:
                          #xtrabackup --prepare --apply-log-only --target-dir=full --incremental-dir=/data/backups/inc1
-                         dumpcmd = "xtrabackup --prepare --apply-log-only --target-dir=" + target + "--incremental-dir=" + full + "/inc" +str(i)
-                         print dumpcmd
+                         dumpcmd = "xtrabackup --prepare --apply-log-only --target-dir=" + target + " --incremental-dir=" + full + "/inc" +str(i)
                          print "prepare inc" + str(i)
                          retcode = os.system(dumpcmd)
                          if retcode != 0:
-                              mailcmd = "mailx -s" +  "\"Failure of preparing Incremental backup\"" + EMAIL + "<" + backuplog
+                              mailcmd = "mailx -s " +  "\"Failure of preparing Incremental backup\"" + EMAIL + "<" + backuplog
                               os.system(mailcmd)
                               exit()
-                           
-               count = len(os.listdir(BACKUP_PATH))
-               print count
-               if count == 0:
-                    ## Restoring the backup to MYSQL data directory
-                    dumpcmd = "xtrabackup --copy-back --target-dir=" + DATA_DIRECTORY
-                    restcode = os.system(dumpcmd)
-                    if restcode == 0:
-                         dumpcmd = "chown -R mysql:mysql " + DATA_DIRECTORY     
-               else:
-                    mailcmd = "mailx -s" +  "\"Please do clean up mysql data directory\"" + EMAIL + "<" + backuplog
-                    os.system(mailcmd)
-                    print "Please do clean up mysql data directory path:"
+                         else:
+                              xf = Xtrabackup()
+                              xf.datacopy(restdays)                             
+
                     
 
      def fullprepare(self,restdays):
-          print " I am full restore"   ## Need to remove
           d = restdays
           print d             ## Need to remove
           target = d + "/full"
@@ -255,25 +246,29 @@ class Xtrabackup():
           if ( retcode != 0 ):
                print "Failure of preparing full backup"
           else:
-               count = len(os.listdir(BACKUP_PATH))
-               print count
-               if count != 0:
-                    mailcmd = "mailx -s" +  "\"Please do clean up mysql data directory\"" + EMAIL + "<" + backuplog
-                    os.system(mailcmd)
-                    print "Please do clean up mysql data directory path:"
-                    exit()
-               else:
-                    dumpcmd = "xtrabackup --copy-back --target-dir=" + DATA_DIRECTORY
+               xf = Xtrabackup()
+               xf.datacopy(restdays)
+
+     def datacopy(self,restdays):
+          d = restdays
+          target = d + "/full"               
+          count = len(os.listdir(DATA_DIRECTORY))
+          print count
+          print DATA_DIRECTORY
+          if count == 0:
+               ## Restoring the backup to MYSQL data directory
+               dumpcmd = "xtrabackup --copy-back --target-dir=" + target
+               restcode = os.system(dumpcmd)
+               if restcode == 0:
+                    dumpcmd = "chown -R mysql:mysql " + DATA_DIRECTORY
                     retcode = os.system(dumpcmd)
                     if retcode == 0:
-                         #### Changing permission of the MYSQL base directory
-                         dumpcmd = "chown -R mysql:mysql " + DATA_DIRECTORY
-                         retcode = os.system(dumpcmd)
-                         if retcode != 0:
-                              mailcmd = "mailx -s" +  "\"Unable to change permission of the mysql data directory\"" + EMAIL + "<" + backuplog
-                              os.system(mailcmd)
-                              print "Unable to change permission of the mysql data directory:"
-                              exit()
+                         print "datacopy is success"
+
+          else:
+               mailcmd = "mailx -s " +  "\"Please do clean up mysql data directory\"" + EMAIL + "<" + backuplog
+               os.system(mailcmd)
+               print "Please do clean up mysql data directory path:"
                          
      def tablebackup(self,database,table,bckloc):
                table = table
@@ -297,10 +292,10 @@ class Xtrabackup():
                     print "Executed when backup path not exist"
                     retcode = os.system(dumpcmd)
                     if retcode == 0:
-                         mailcmd = "mailx -s" +  "\"Table Backup is Success\"" + EMAIL + "<" + backuplog
+                         mailcmd = "mailx -s " +  "\"Table Backup is Success\"" + EMAIL + "<" + backuplog
                          os.system(mailcmd)
                     else:
-                         mailcmd = "mailx -s" +  "\"Table Backup Failed please verify the logs\"" + EMAIL + "<" + backuplog
+                         mailcmd = "mailx -s " +  "\"Table Backup Failed please verify the logs\"" + EMAIL + "<" + backuplog
                          os.system(mailcmd)
                else:
                     if len(os.listdir(bckloc)) == 0:
@@ -317,10 +312,10 @@ class Xtrabackup():
                          print "Executed when backup path exists"
                          retcode = os.system(dumpcmd)
                          if retcode == 0:
-                              mailcmd = "mailx -s" +  "\"Table Backup is Success\"" + EMAIL + "<" + backuplog
+                              mailcmd = "mailx -s " +  "\"Table Backup is Success\"" + EMAIL + "<" + backuplog
                               os.system(mailcmd)
                          else:
-                              mailcmd = "mailx -s" +  "\"Table Backup Failed please verify the logs\"" + EMAIL + "<" + backuplog
+                              mailcmd = "mailx -s " +  "\"Table Backup Failed please verify the logs\"" + EMAIL + "<" + backuplog
                               os.system(mailcmd)
                     else:
                          print "Files already existing please delete files/directories under " + bckloc
@@ -333,32 +328,43 @@ class Xtrabackup():
           dumpcmd = "xtrabackup --prepare --export --target-dir=" + bckloc
           retcode = os.system(dumpcmd)
           if retcode == 0:
-               mailcmd = "mailx -s" +  "\"Tableprepare restore is success\"" + EMAIL + "<" + backuplog
+               mailcmd = "mailx -s " +  "\"Tableprepare restore is success\"" + EMAIL + "<" + backuplog
                os.system(mailcmd)
           else:    
-               mailcmd = "mailx -s" +  "\"Tableprepare restore is Failure\"" + EMAIL + "<" + backuplog
+               mailcmd = "mailx -s " +  "\"Tableprepare restore is Failure\"" + EMAIL + "<" + backuplog
                os.system(mailcmd)
                exit()
 
 
      def dataBase(self,databases):
+          print "I am database backup"
           databases = databases
           days = datetime.date.today()
           print databases
-          for i in range(len(databases)):
-               BKPLOC = BACKUP_PATH + "/" + str(days) + "/" + databases[i]
-               if os.path.isdir(BKPLOC) != True:
-                    os.makedirs(BKPLOC)
-                    dumpcmd = "xtrabackup --databases=\'" + databases[i] + "\' --user=" + DB_USER + " --password=" + DB_USER_PASSWORD + " --target-dir=" + BKPLOC
-                    retcode = os.system(dumpcmd)
-                    if retcode != 0:
-                         mailcmd = "mailx -s" +  "\"database backup got failed\"" + EMAIL + "<" + backuplog
-                         os.system(mailcmd)
+          print days
+          BKPLOC = BACKUP_PATH + "/" + str(days) + "/" + databases[0]
+          if os.path.isdir(BKPLOC) != True:
+               os.makedirs(BKPLOC)
+               os.chdir(BKPLOC)
+               f = open("table_bkp.txt","a+")
+               for i in range(len(databases)):
+                    f.write(databases[i] +"\n")
+               f.close()
+               table_file = BKPLOC + "/" + "table_bkp.txt"
+               # dumpcmd = "xtrabackup --databases=\'" + databases[i] + "\' --user=" + DB_USER + " --password=" + DB_USER_PASSWORD + " --target-dir=" + BKPLOC
+               dumpcmd = "xtrabackup --backup --user=" + DB_USER + " --password=" + DB_USER_PASSWORD + " --target-dir=" + BKPLOC + " --databases-file=" + table_file
+               retcode = os.system(dumpcmd)
+               if retcode != 0:
+                    print "backup got failed"
+                    mailcmd = "mailx -s " +  "\"database backup got failed\"" + EMAIL + " < " + backuplog
+                    os.system(mailcmd)
                     print dumpcmd
                     
-               else:
-                    mailcmd = "mailx -s" +  "\"Backup path existing\"" + EMAIL + "<" + backuplog
-                    exit()
+          else:
+               mailcmd = "mailx -s " +  "\"Backup path existing\"" + EMAIL + " < " + backuplog
+               os.system(mailcmd)
+               print mailcmd
+               exit()
 
      def databaseRestore(self,bkploc):
           bkploc = bkploc 
@@ -376,10 +382,10 @@ elif TYPEOF_BKP == 'cleanup':
      xf = Xtrabackup()
      xf.cleanup(BKP_CLEANUP)
 
-elif TYPEOF_BKP == 'restore':
+elif TYPEOF_BKP == 'fullrestore':
      userIn = raw_input("Is the back restore is going to perform on local node yes/no: ")
      if (userIn == 'yes' or userIn == 'y' or userIn == 'Y'):
-          restdays = raw_input("please provide backup location: ")
+          restdays = raw_input("please provide backup location <Eg: /var/lib/backups/(date)>: ")
           #restdays = datetime.datetime.strptime(userIn, "%d/%m/%y")
           inc = input("please provide the incremental backup's: ")
           #print restdays.date()
@@ -388,26 +394,23 @@ elif TYPEOF_BKP == 'restore':
      elif (userIn == 'No' or userIn == 'n' or userIn == 'N'):
           print "Backup restore script and backup should be on local node, Please copy script and backup to local node"
           exit()
+
+elif TYPEOF_BKP == 'datacopy':
+     restdays = raw_input("please provide full backup location <Eg: /var/lib/backups/(date)>: ")
+     xf = Xtrabackup()
+     xf.datacopy(restdays)
           
-elif TYPEOF_BKP == 'database':
-     if len(sys.argv) > 1:
-          databases = []
-          for i in range(len(sys.argv)-2):
-               list = sys.argv[i+2]
+elif TYPEOF_BKP == 'database' or TYPEOF_BKP == 'databases':
+     userIn = int(raw_input("please provide the no of databases: "))
+     databases = []
+     for i in range(userIn):
+          list = str(raw_input("Provide the database name that need to backup: "))
+          d = DATA_DIRECTORY + "/" + list
+          if os.path.isdir(d) == True:
                databases.append(list)
-     else:
-          userIn = int(raw_input("please provide the no of databases: "))
-          databases = []
-          for i in range(userIn):
-               list = str(raw_input("Provide the database name that need to backup: "))
-               d = DATA_DIRECTORY + "/" + list
-               print os.path.isdir(d)
-               print d
-               if os.path.isdir(d) == True:
-                    databases.append(list)
-               else:
-                    print "Database is not located, Please provide existing database: "
-                    exit()
+          else:
+               print "Database is not located, Please provide existing database: "
+               exit()
      xf = Xtrabackup()
      xf.dataBase(databases)
      
@@ -434,19 +437,15 @@ elif TYPEOF_BKP == 'tablebackup':
 elif TYPEOF_BKP == 'test':
      print "test"
      
-
 elif TYPEOF_BKP == "-h":
      print "Usage of xtrabackup.py"
      print "xtrabackup.py <full> for full backup"
      print "xtrabackup.py <Inc> for Incremental backup, Make sure to have full backup before triggering for incremental backup"
-     print "xtrabackup.py <restore> for preparing the backup for the restore. Please have the date"
+     print "xtrabackup.py <fullrestore> for preparing the backup for the restore. Please have the date"
+     print "xtrabackup.py <datacopy> for copying data which was prepared by using fullrestore and got failed copy back to data directory"
      print "xtrabackup.py <database> <database1> <database2> For database level backup's"
      print "xtrabackup.py <database> will prompt for databases that need to have backup's"
      print "xtrabackup.py <databaserestore> will prompt for preparing databases that need to perform restore"
      print "xtrabackup.py <tablebackup> for backing up the tables"
      print "xtrabackup.py <tableprepare> for preparing the tables for restore"
-
-
-     
-
 
