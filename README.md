@@ -1,2 +1,1 @@
-# zabbixautomation
 # xtrabackup
